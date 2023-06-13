@@ -10,9 +10,9 @@ import ray
 ray.init(ignore_reinit_error=True)
 
 from ray.tune.registry import register_env
-from gym_examples.envs.EMS import EnergyManagementEnv
+from gym_examples.envs.EMS_no_gen import EnergyManagementEnv_no_gen
 select_env = "gym_examples/EMS_no_gen-v0"
-register_env(select_env, lambda config: EnergyManagementEnv())
+register_env(select_env, lambda config: EnergyManagementEnv_no_gen())
 
 from ray.rllib.algorithms.ppo import PPOConfig
 config = (

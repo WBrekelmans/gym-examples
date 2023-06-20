@@ -4,11 +4,11 @@ from gymnasium import spaces
 import pandas as pd
 import scipy.integrate as integrate
 
-
-# 0.25 eruit, door boundary condities kan het werken
-
 class EnergyManagementEnv_no_gen(gym.Env):
     def __init__(self):
+        self.NUMBER_OF_DAYS = 7
+        self.FIX_SOC = True
+        self.FIX_TIME = True
         self.battery_capacity = 4e5  # kwh
         self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
 
@@ -85,6 +85,7 @@ class EnergyManagementEnv_no_gen(gym.Env):
             "soc_battery": np.array([self._soc_battery]),
             "power_from_grid": np.array([self._power_from_grid]),
             "power_from_battery": np.array([self._power_from_battery])
+
         }
 
     def get_energy_cost(self):
@@ -132,10 +133,10 @@ class EnergyManagementEnv_no_gen(gym.Env):
                 print(self._get_obs()[key])
         return
 
-    def reset_probabilistic_time_obs(self, fix_time=True):
+    def reset_probabilistic_time_obs(self):
         day_year = self.np_random.integers(low=1, high=365, dtype=int)
         quarter_day = self.np_random.integers(low=1, high=96, dtype=int)
-        if fix_time:
+        if self.FIX_TIME:
             day_year = 100
             quarter_day = 1
         day_week = day_year % 7 + 1
@@ -153,6 +154,10 @@ class EnergyManagementEnv_no_gen(gym.Env):
             value_to_set = np.float64(self.np_random.uniform(low=-1,
                                                              high=1))
             setattr(self, '_' + prob_obs, value_to_set)
+        if self.FIX_SOC:
+            self._soc_battery = 0
+            self._power_from_battery = 0
+        self.next_SOC = self._soc_battery
         return
 
     def reset_power_from_grid(self):
@@ -195,6 +200,7 @@ class EnergyManagementEnv_no_gen(gym.Env):
         self.test_energy_balance()
         obs = self._get_obs()
         info = self._get_info()
+        print('beer')
         return obs, info
 
     def step_proceed_quarter(self):
@@ -265,7 +271,7 @@ class EnergyManagementEnv_no_gen(gym.Env):
                 power_from_battery = -1 * delta_soc * 1 / 4
         new_soc = np.clip(new_soc, self.range_dict["soc_battery"][0],
                           self.range_dict["soc_battery"][1])
-        self._soc_battery = self.scale_value(new_soc, self.range_dict['soc_battery'][0],
+        self.next_SOC = self.scale_value(new_soc, self.range_dict['soc_battery'][0],
                                              self.range_dict['soc_battery'][1])
         self._power_from_battery = self.scale_value(power_from_battery, self.range_dict['power_from_battery'][0],
                                                     self.range_dict['power_from_battery'][1])
@@ -287,7 +293,7 @@ class EnergyManagementEnv_no_gen(gym.Env):
     def step(self, action):
         print(self._quarter_counter)
         self._quarter_counter = self._quarter_counter + 1
-        if self._quarter_counter == 96:
+        if self._quarter_counter == 96*self.NUMBER_OF_DAYS:
             info = self._get_info()
             self.terminated = True
             reward = 0
@@ -303,6 +309,7 @@ class EnergyManagementEnv_no_gen(gym.Env):
             self._power_from_battery = self.scale_value(power_from_battery, self.range_dict['power_from_battery'][0],
                                                         self.range_dict['power_from_battery'][1])
             # action masking
+            self._soc_battery = self.next_SOC
             self.step_soc_battery_new()
             # calculate grid
             self.step_power_from_grid()

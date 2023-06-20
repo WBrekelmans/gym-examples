@@ -3,10 +3,10 @@ import gymnasium as gym
 from gymnasium import spaces
 import pandas as pd
 import scipy.integrate as integrate
-# 0.25 eruit, door boundary condities kan het werken
 
 class EnergyManagementEnv(gym.Env):
     def __init__(self):
+        self.NUMBER_OF_DAYS = 7
         self.battery_capacity = 4e5  # kwh
         self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
         self.generator_kwh_price = 0.60  # euro
@@ -307,7 +307,7 @@ class EnergyManagementEnv(gym.Env):
     def step(self, action):
         print(self._quarter_counter)
         self._quarter_counter = self._quarter_counter + 1
-        if self._quarter_counter == 96:
+        if self._quarter_counter == 96*self.NUMBER_OF_DAYS:
             info = self._get_info()
             self.terminated = True
             reward = 0

@@ -1,6 +1,6 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/exH_no_gen"
+chkpt_root = "/home/willem/policies/week_with_gen_20"
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
 ray_results = "{}/ray_results/".format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)

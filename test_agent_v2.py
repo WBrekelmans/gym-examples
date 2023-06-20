@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
 
 # inputs
-chkpt_dst = "/home/willem/policies/exH/checkpoint_000020/policies/default_policy"
+chkpt_dst = "/home/willem/policies/week_with_gen_20/checkpoint_000020/policies/default_policy"
 
 # register the environment
 from ray.tune.registry import register_env
@@ -35,7 +35,7 @@ action = my_policy.compute_single_action(obs)[0]
 
 i = 0
 width_array = 10
-length_array = 96
+length_array = 96*7
 
 obs_array = np.zeros(shape=(length_array, width_array))
 action_array = np.zeros(shape=(length_array, 2))

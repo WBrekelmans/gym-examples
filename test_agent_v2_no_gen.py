@@ -3,10 +3,10 @@
 
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.use("TkAgg")
+matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/exH_no_gen/checkpoint_000020/policies/default_policy"
+chkpt_dst = "/home/willem/policies/week_no_gen_fix_soc_1000/checkpoint_000845/policies/default_policy"
 
 # register the environment
 from ray.tune.registry import register_env
@@ -36,7 +36,7 @@ action = my_policy.compute_single_action(obs)[0]
 
 i = 0
 width_array = 9
-length_array = 95
+length_array = 96*7
 
 obs_array = np.zeros(shape=(length_array, width_array))
 action_array = np.zeros(shape=(length_array, 1))
@@ -119,11 +119,36 @@ axs[8].set_title('energy cost')
 plt.legend()
 
 # energy cost
-total_grid_cost = sum(obs_array_descaled[0:k,7]*obs_array_descaled[0:k,4])*0.25
+grid_cost = obs_array_descaled[:,7]*obs_array_descaled[:,4]*0.25
+total_grid_cost = sum(grid_cost)
 print('total grid cost: ' + str(total_grid_cost))
 print(' total cost: ' + str(total_grid_cost))
 
 # compare to baseline
-baseline = np.sum(obs_array_descaled[:,3] * obs_array_descaled[:,4])
-cost_ratio = (total_grid_cost) / baseline
+baseline = obs_array_descaled[:,3] * obs_array_descaled[:,4]*0.25
+total_baseline = sum(baseline)
+cost_ratio = (total_grid_cost) / total_baseline
 print('fraction cost compared to baseline: ' + str(cost_ratio))
+
+# solar baseline
+energy_usage_solar = obs_array_descaled[:,3] - obs_array_descaled[:,5]
+energy_usage_solar[energy_usage_solar<0] = 0
+solar_baseline = energy_usage_solar*obs_array_descaled[:,4]*0.25
+total_solar_baseline = sum(solar_baseline)
+cost_ratio_solar = (total_grid_cost) / total_solar_baseline
+print('fraction cost compared to solar baseline: ' + str(cost_ratio_solar))
+
+# solar with sell-back baseline
+energy_usage_solar = obs_array_descaled[:,3] - obs_array_descaled[:,5]
+solar_baseline_sellback = energy_usage_solar*obs_array_descaled[:,4]*0.25
+total_solar_baseline_sellback = sum(solar_baseline_sellback)
+cost_ratio_solar_sellback = (total_grid_cost) / total_solar_baseline_sellback
+print('fraction cost compared to solar baseline sell-back: ' + str(cost_ratio_solar_sellback))
+
+# baseline and actual energy cost
+f,ax = plt.subplots()
+ax.plot(grid_cost, label='agent cost')
+ax.plot(baseline, label='baseline')
+ax.plot(solar_baseline, label='solar')
+ax.plot(solar_baseline_sellback, label='solar sellback')
+ax.legend()

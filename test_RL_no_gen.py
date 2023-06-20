@@ -7,6 +7,7 @@ shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
 
 # local mode
 import ray
+#hello
 ray.init(include_dashboard=False)
 
 from ray.tune.registry import register_env

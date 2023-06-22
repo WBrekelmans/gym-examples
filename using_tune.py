@@ -17,11 +17,7 @@ select_env = "gym_examples/EMS_no_gen-v0"
 register_env(select_env, lambda config: EnergyManagementEnv_no_gen())
 
 # initialize ray
-
 ray.init(include_dashboard=False)
-
-
-
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.logger import pretty_print
 

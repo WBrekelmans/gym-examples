@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/week_no_gen_fix_soc_1000/checkpoint_000845/policies/default_policy"
+chkpt_dst = "/home/willem/policies/test_larger_network/checkpoint_000223/policies/default_policy"
 
 # register the environment
 from ray.tune.registry import register_env

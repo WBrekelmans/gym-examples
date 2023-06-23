@@ -292,25 +292,26 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return reward
 
     def step(self, action):
-        print(self._quarter_counter)
-        self._quarter_counter = self._quarter_counter + 1
-        self.step_proceed_quarter()
-        # update determined obs was here
-        # clip values
+        # clip power from battery
         power_from_battery = self.descale_value(action[0], self.range_dict['power_from_battery'][0],
                                                 self.range_dict['power_from_battery'][1])
         power_from_battery = np.clip(power_from_battery, self.range_dict["power_from_battery"][0],
                                      self.range_dict["power_from_battery"][1])
         self._power_from_battery = self.scale_value(power_from_battery, self.range_dict['power_from_battery'][0],
                                                     self.range_dict['power_from_battery'][1])
-        # action masking
+        # mask power from battery to allow next SOC to be legal
+        # this also gets us the new SOC
         self.step_soc_battery_new()
+        # determine power from grid
         self.step_power_from_grid()
+        # determine reward
         reward = self.step_reward()
-        self.update_determined_obs() # perhaps move this
-        self.step_power_from_grid()
-        # calculate grid
+        # with new power from battery and power from grid we can determine energy balance
         self.test_energy_balance()
+        # update state
+        self._quarter_counter = self._quarter_counter + 1
+        self.step_proceed_quarter()
+        self.update_determined_obs()
         info = self._get_info()
         obs = self._get_obs()
         if self._quarter_counter == 96*self.NUMBER_OF_DAYS:

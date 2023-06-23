@@ -9,7 +9,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.NUMBER_OF_DAYS = 7
         self.FIX_SOC = True
         self.FIX_TIME = True
-        self.battery_capacity = 4e5  # kwh
+        self.battery_capacity = 4e5  # wh
         self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
 
         self.range_dict_disc = {"day_year": [1, 365], "day_week": [1, 7], "quarter_day": [1, 96]}
@@ -18,26 +18,27 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                                 "day_ahead_price": [-0.00022236, 0.000871],
                                 "solar_generation": [0.0, 93750.0 * 4],
                                 "soc_battery": [0.0, self.battery_capacity],
-                                "power_from_grid": [0.0, 0.0],
-                                "power_to_grid": [0.0, 0.0],
-                                "power_from_battery": [-self.charge_rate_battery, self.charge_rate_battery]}
+                                "power_from_grid": [0.0, 0.0]}
         self.range_dict_cont_r = {"usage": [-1, 1], "day_ahead_price": [-1, 1],
                                   "solar_generation": [-1, 1], "soc_battery": [-1, 1],
-                                  "power_from_grid": [-1, 1],
-                                  "power_from_battery": [-1, 1]}
+                                  "power_from_grid": [-1, 1]}
+        self.range_power_from_battery = [-self.charge_rate_battery, self.charge_rate_battery]
+
         self.terminated = False
         self.truncated = False
-        self.prob_obs = ["soc_battery", "power_from_battery"]
+
+        self.prob_obs = ["soc_battery"]
 
         self.discrete_states = {}
         self.discrete_states = {
             disc_value: spaces.Box(low=self.range_dict_disc_r[disc_value][0],
                                    high=self.range_dict_disc_r[disc_value][1],
-                                   shape=(1,), dtype=int) for disc_value in self.range_dict_disc_r.keys()}
+                                   shape=(1,), dtype=np.float64) for disc_value in self.range_dict_disc_r.keys()}
         self.cont_states = {
             cont_value: spaces.Box(low=self.range_dict_cont_r[cont_value][0],
                                    high=self.range_dict_cont_r[cont_value][1],
                                    shape=(1,), dtype=np.float64) for cont_value in self.range_dict_cont_r.keys()}
+
         self.states = self.discrete_states
         self.states.update(self.cont_states)
         self.observation_space = spaces.Dict(self.states)
@@ -48,14 +49,14 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.range_dict_r = self.range_dict_disc_r
         self.range_dict_r.update(self.range_dict_cont_r)
 
-        self.power_from_grid_max = self.range_dict['usage'][1] - self.range_dict['solar_generation'][0] - self.range_dict['power_from_battery'][0]
-        self.power_from_grid_min = self.range_dict['usage'][0] - self.range_dict['solar_generation'][1] - self.range_dict['power_from_battery'][1]
+        self.power_from_grid_max = self.range_dict['usage'][1] - self.range_dict['solar_generation'][0] - self.range_power_from_battery[0]
+        self.power_from_grid_min = self.range_dict['usage'][0] - self.range_dict['solar_generation'][1] - self.range_power_from_battery[1]
         self.range_dict['power_from_grid'][0] = self.power_from_grid_min
         self.range_dict['power_from_grid'][1] = self.power_from_grid_max
 
         # power from battery, power from generator
-        self.action_space = spaces.Box(low=np.array([self.range_dict_r["power_from_battery"][0]]),
-                                       high=np.array([self.range_dict_r["power_from_battery"][1]]),
+        self.action_space = spaces.Box(low=np.array([-1]),
+                                       high=np.array([1]),
                                        shape=(1,), dtype=np.float64)
 
         self.data_path = '/home/willem/data_analysis/'
@@ -83,9 +84,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             "day_ahead_price": np.array([self._day_ahead_price]),
             "solar_generation": np.array([self._solar_generation]),
             "soc_battery": np.array([self._soc_battery]),
-            "power_from_grid": np.array([self._power_from_grid]),
-            "power_from_battery": np.array([self._power_from_battery])
-
+            "power_from_grid": np.array([self._power_from_grid])
         }
 
     def get_energy_cost(self):
@@ -156,10 +155,9 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             setattr(self, '_' + prob_obs, value_to_set)
         if self.FIX_SOC:
             self._soc_battery = 0
-            self._power_from_battery = 0
-        self.next_SOC = self._soc_battery
         return
 
+    # give power from grid a random value after reset
     def reset_power_from_grid(self):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
@@ -197,10 +195,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.update_determined_obs()
         self.reset_probabilistic_obs()
         self.reset_power_from_grid()
-        self.test_energy_balance()
         obs = self._get_obs()
         info = self._get_info()
-        print('beer')
         return obs, info
 
     def step_proceed_quarter(self):
@@ -242,6 +238,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                                               self.range_dict['solar_generation'][1])
         power_from_battery = self.descale_value(self._power_from_battery, self.range_dict['power_from_battery'][0],
                                                 self.range_dict['power_from_battery'][1])
+        # check if power from battery is really from current action
         power_from_grid = usage - solar_generation - power_from_battery
         self._power_from_grid = self.scale_value(power_from_grid, self.range_dict['power_from_grid'][0],
                                                  self.range_dict['power_from_grid'][1])
@@ -292,13 +289,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return reward
 
     def step(self, action):
-        # clip power from battery
-        power_from_battery = self.descale_value(action[0], self.range_dict['power_from_battery'][0],
-                                                self.range_dict['power_from_battery'][1])
-        power_from_battery = np.clip(power_from_battery, self.range_dict["power_from_battery"][0],
-                                     self.range_dict["power_from_battery"][1])
-        self._power_from_battery = self.scale_value(power_from_battery, self.range_dict['power_from_battery'][0],
-                                                    self.range_dict['power_from_battery'][1])
+        self._power_from_battery = action[0]
         # mask power from battery to allow next SOC to be legal
         # this also gets us the new SOC
         self.step_soc_battery_new()

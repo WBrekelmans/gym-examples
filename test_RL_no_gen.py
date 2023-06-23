@@ -23,7 +23,7 @@ config = (
     .environment(select_env)
     .rollouts(num_rollout_workers=15)
     .framework("tf2")
-    .training(model={"fcnet_hiddens": [300, 300]})
+    .training(model={"fcnet_hiddens": [32, 32]})
     .evaluation(evaluation_num_workers=1)
     .training(train_batch_size=10000,  sgd_minibatch_size=100, gamma=0.9, lr=0.001, kl_coeff=0.3)
 )

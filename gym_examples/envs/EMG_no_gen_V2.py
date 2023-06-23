@@ -6,6 +6,8 @@ import scipy.integrate as integrate
 
 class EnergyManagementEnv_no_gen_V2(gym.Env):
     def __init__(self):
+        self._power_from_grid = None
+        self._power_from_battery = None
         self.NUMBER_OF_DAYS = 7
         self.FIX_SOC = True
         self.FIX_TIME = True
@@ -108,9 +110,9 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
         total_quarter = round((day_year - 1) * 96 + quarter_day)
-        print('day year is ' + str(day_year))
-        print('quarter day is ' + str(quarter_day))
-        print('total quarter is ' + str(total_quarter))
+        #print('day year is ' + str(day_year))
+        #print('quarter day is ' + str(quarter_day))
+        #print('total quarter is ' + str(total_quarter))
         usage = self.df_env.usage[total_quarter].astype(np.float64)
         day_ahead_price = self.df_env.day_ahead_price[total_quarter].astype(np.float64)
         solar_generation = self.df_env.solar_generation[total_quarter].astype(np.float64)
@@ -173,8 +175,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
                                               self.range_dict['solar_generation'][1])
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_dict['power_from_battery'][0],
-                                                self.range_dict['power_from_battery'][1])
+        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+                                                self.range_power_from_battery[1])
         power_from_grid = self.descale_value(self._power_from_grid, self.range_dict['power_from_grid'][0],
                                              self.range_dict['power_from_grid'][1])
         balance = usage - solar_generation - power_from_battery - power_from_grid
@@ -194,7 +196,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.reset_probabilistic_time_obs()
         self.update_determined_obs()
         self.reset_probabilistic_obs()
-        self.reset_power_from_grid()
+        self._power_from_grid = np.float64(self.np_random.uniform(low=-1,
+                                                             high=1))
         obs = self._get_obs()
         info = self._get_info()
         return obs, info
@@ -236,8 +239,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
                                               self.range_dict['solar_generation'][1])
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_dict['power_from_battery'][0],
-                                                self.range_dict['power_from_battery'][1])
+        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+                                                self.range_power_from_battery[1])
         # check if power from battery is really from current action
         power_from_grid = usage - solar_generation - power_from_battery
         self._power_from_grid = self.scale_value(power_from_grid, self.range_dict['power_from_grid'][0],
@@ -245,8 +248,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return
 
     def step_soc_battery_new(self):
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_dict['power_from_battery'][0],
-                                                self.range_dict['power_from_battery'][1])
+        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+                                                self.range_power_from_battery[1])
         old_soc_battery = self.descale_value(self._soc_battery, self.range_dict['soc_battery'][0],
                                              self.range_dict['soc_battery'][1])
         new_soc = old_soc_battery - power_from_battery * 0.25
@@ -271,8 +274,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         new_soc = self.scale_value(new_soc, self.range_dict['soc_battery'][0],
                                              self.range_dict['soc_battery'][1])
         self._soc_battery = new_soc
-        self._power_from_battery = self.scale_value(power_from_battery, self.range_dict['power_from_battery'][0],
-                                                    self.range_dict['power_from_battery'][1])
+        self._power_from_battery = self.scale_value(power_from_battery, self.range_power_from_battery[0],
+                                                    self.range_power_from_battery[1])
         return
 
     def punish_soc(self):

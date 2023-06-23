@@ -10,9 +10,9 @@ chkpt_dst = "/home/willem/policies/test_larger_network/checkpoint_000223/policie
 
 # register the environment
 from ray.tune.registry import register_env
-from gym_examples.envs.EMS_no_gen import EnergyManagementEnv_no_gen
-select_env = "gym_examples/EMS_no_gen-v0"
-register_env(select_env, lambda config: EnergyManagementEnv_no_gen())
+from gym_examples.envs.EMG_no_gen_V2 import EnergyManagementEnv_no_gen_V2
+select_env = "gym_examples/EMS_no_gen-v2"
+register_env(select_env, lambda config: EnergyManagementEnv_no_gen_V2())
 
 # load chkpt
 from ray.rllib.algorithms.algorithm import Policy

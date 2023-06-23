@@ -1,6 +1,6 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/test_larger_network"
+chkpt_root = "/home/willem/policies/v2_env"
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
 ray_results = "{}/ray_results/".format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
@@ -12,9 +12,9 @@ print('http://' + context.dashboard_url)
 
 # import environment
 from ray.tune.registry import register_env
-from gym_examples.envs.EMS_no_gen import EnergyManagementEnv_no_gen
-select_env = "gym_examples/EMS_no_gen-v0"
-register_env(select_env, lambda config: EnergyManagementEnv_no_gen())
+from gym_examples.envs.EMG_no_gen_V2 import EnergyManagementEnv_no_gen_V2
+select_env = "gym_examples/EMS_no_gen-v2"
+register_env(select_env, lambda config: EnergyManagementEnv_no_gen_V2())
 
 # training configuration
 from ray.rllib.algorithms.ppo import PPOConfig
@@ -32,7 +32,7 @@ agent = config.build()
 
 # train loop
 status = "{:2d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:4.2f} saved {}"
-n_iter = 1000
+n_iter = 200
 
 for n in range(n_iter):
     result = agent.train()

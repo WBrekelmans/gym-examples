@@ -68,9 +68,9 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
 
         self.data_path = '/home/willem/data_analysis/'
         self.filename = 'df_env.pkl'
-
-        self.df_env['usage'] = self.df_env['usage'] * 4  # make usage kw
-        self.df_env['solar_generation'] = self.df_env['solar_generation'] * 4  # make solar kw
+        self.df_env = pd.read_pickle(self.filename)
+        self.df_env['usage'] = self.df_env['usage'] * 4  # make usage w
+        self.df_env['solar_generation'] = self.df_env['solar_generation'] * 4  # make solar w
 
     def scale_eq(self, value, min_meas, max_meas, min_des, max_des):
         # https://stats.stackexchange.com/questions/281162/scale-a-number-between-a-range

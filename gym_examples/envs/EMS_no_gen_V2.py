@@ -17,7 +17,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.battery_capacity = 4e5  # wh
         self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
 
-        self.range_dict_disc = {"day_year": [1, 365], "day_week": [1, 7], "quarter_day": [1, 96]}
+        self.range_dict_disc = {"day_year": [0, 364], "day_week": [0, 6], "quarter_day": [0, 95]}
         self.range_dict_disc_r = {"day_year": [-1, 1], "day_week": [-1, 1], "quarter_day": [-1, 1]}
         self.range_dict_cont = {"usage": [75000.0 * 4, 249000.0 * 4],
                                 "day_ahead_price": [-0.00022236, 0.000871],
@@ -116,9 +116,11 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
         total_quarter = round((day_year - 1) * 96 + quarter_day)
+        print('total quarter:'+str(total_quarter))
         # print('day year is ' + str(day_year))
         # print('quarter day is ' + str(quarter_day))
         # print('total quarter is ' + str(total_quarter))
+        print(total_quarter)
         usage = self.df_env.usage[total_quarter].astype(np.float64)
         day_ahead_price = self.df_env.day_ahead_price[total_quarter].astype(np.float64)
         solar_generation = self.df_env.solar_generation[total_quarter].astype(np.float64)
@@ -141,12 +143,12 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return
 
     def reset_probabilistic_time_obs(self):
-        day_year = self.np_random.integers(low=1, high=365, dtype=int)
-        quarter_day = self.np_random.integers(low=1, high=96, dtype=int)
+        day_year = self.np_random.integers(low=0, high=364, dtype=int)
+        quarter_day = self.np_random.integers(low=0, high=95, dtype=int)
         if self.FIX_TIME:
-            day_year = 100
+            day_year = 99
             quarter_day = 1
-        day_week = day_year % 7 + 1
+        day_week = day_year % 6
         self._start_quarter = quarter_day
         self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                           self.range_dict['day_year'][1])
@@ -196,7 +198,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return
 
     def reset(self, seed=None, options=None):
-        self._quarter_counter = 1
+        self._quarter_counter = 0
         self.terminated = False
         super().reset(seed=seed)
         self.reset_probabilistic_time_obs()
@@ -212,21 +214,21 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
         quarter_day = quarter_day + 1
-        if quarter_day < 97:
+        if quarter_day < 96:
             self._quarter_day = self.scale_value(quarter_day, self.range_dict['quarter_day'][0],
                                                  self.range_dict['quarter_day'][1])
         else:
-            quarter_day = 1
+            quarter_day = 0
             self._quarter_day = self.scale_value(quarter_day, self.range_dict['quarter_day'][0],
                                                  self.range_dict['quarter_day'][1])
             day_week = round(self.descale_value(self._day_week, self.range_dict['day_week'][0],
                                                 self.range_dict['day_week'][1]))
             day_week += 1
-            if day_week < 8:
+            if day_week < 7:
                 self._day_week = self.scale_value(day_week, self.range_dict['day_week'][0],
                                                   self.range_dict['day_week'][1])
             else:
-                day_week = 1
+                day_week = 0
                 self._day_week = self.scale_value(day_week, self.range_dict['day_week'][0],
                                                   self.range_dict['day_week'][1])
             day_year = round(self.descale_value(self._day_year, self.range_dict['day_year'][0],
@@ -236,7 +238,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                 self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                                   self.range_dict['day_year'][1])
             else:
-                day_year = 1
+                day_year = 0
                 self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                                   self.range_dict['day_year'][1])
         return
@@ -314,7 +316,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.update_determined_obs()
         info = self._get_info()
         obs = self._get_obs()
-        if self._quarter_counter == 96 * self.NUMBER_OF_DAYS:
+        if self._quarter_counter == 95 * self.NUMBER_OF_DAYS:
             self.terminated = True
         else:
             self.terminated = False

@@ -13,6 +13,7 @@ register(
 register(
     id="gym_examples/EMS_no_gen-v2",
     entry_point="gym_examples.envs:EnergyManagementEnv_no_gen_V2",
+    max_episode_steps=672,
 )
 
 register(

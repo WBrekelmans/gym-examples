@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/test_larger_network/checkpoint_000223/policies/default_policy"
+chkpt_dst = "/home/willem/policies/v2_env_action_space_maybe_clipped/checkpoint_000001/policies/default_policy"
 
 # register the environment
 from ray.tune.registry import register_env
-from gym_examples.envs.EMG_no_gen_V2 import EnergyManagementEnv_no_gen_V2
+from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
 select_env = "gym_examples/EMS_no_gen-v2"
 register_env(select_env, lambda config: EnergyManagementEnv_no_gen_V2())
 
@@ -21,11 +21,11 @@ tf.compat.v1.enable_eager_execution()
 # https://github.com/tensorflow/tensorflow/issues/18304
 my_policy = Policy.from_checkpoint(chkpt_dst)
 
-# make the environment
+# make the environmentw
 import gymnasium as gym
 import gym_examples
 from gymnasium.wrappers import FlattenObservation
-env = gym.make('gym_examples/EMS_no_gen-v0')
+env = gym.make('gym_examples/EMS_no_gen-v2')
 env_f = FlattenObservation(env)
 
 # reset environment and get first obs
@@ -35,12 +35,13 @@ obs = np.fromiter(obs.values(),dtype='float')
 action = my_policy.compute_single_action(obs)[0]
 
 i = 0
-width_array = 9
+width_array = 8
 length_array = 96*7
 
 obs_array = np.zeros(shape=(length_array, width_array))
 action_array = np.zeros(shape=(length_array, 1))
 energy_cost_array = np.zeros(shape=(length_array, 1))
+power_from_battery_array = np.zeros(shape=(length_array, 1))
 battery_percentage_vec = []
 
 while not env.terminated:
@@ -51,9 +52,10 @@ while not env.terminated:
     obs = np.fromiter(obs.values(), dtype='float')
     obs_array[i,:] = obs
     #
-    action = my_policy.compute_single_action(obs)[0]
+    action = my_policy.compute_single_action([obs], unquash_action=True)[0]
     action_array[i,:] = action
     energy_cost_array[i] = output[4]['energy_cost']
+    power_from_battery_array[i] = output[4]['power_from_battery']
     print(i)
     i += 1
 
@@ -63,7 +65,7 @@ plt.plot(obs_array[:,4], label='day ahead price')
 plt.plot(obs_array[:,5], label='solar_generation')
 plt.plot(obs_array[:,6], label='soc_battery')
 plt.plot(obs_array[:,7], label='power from grid')
-plt.plot(obs_array[:,8], label='power from battery')
+plt.plot(power_from_battery_array, label='power from battery')
 plt.legend()
 plt.show()
 
@@ -77,7 +79,7 @@ obs_array_descaled[:,4] = env.descale_value(obs_array_descaled[:,4], env.range_d
 obs_array_descaled[:,5] = env.descale_value(obs_array_descaled[:,5], env.range_dict['solar_generation'][0], env.range_dict['solar_generation'][1])
 obs_array_descaled[:,6] = env.descale_value(obs_array_descaled[:,6], env.range_dict['soc_battery'][0], env.range_dict['soc_battery'][1])
 obs_array_descaled[:,7] = env.descale_value(obs_array_descaled[:,7], env.range_dict['power_from_grid'][0], env.range_dict['power_from_grid'][1])
-obs_array_descaled[:,8] = env.descale_value(obs_array_descaled[:,8], env.range_dict['power_from_battery'][0], env.range_dict['power_from_battery'][1])
+power_from_battery_array_descaled = env.descale_value(power_from_battery_array, env.range_power_from_battery[0], env.range_power_from_battery[1])
 
 power_from_grid = obs_array_descaled[:,7]
 day_ahead_price = obs_array_descaled[:,4]
@@ -91,11 +93,10 @@ plt.plot(obs_array_descaled[:,4], label='day ahead price')
 plt.plot(obs_array_descaled[:,5], label='solar_generation')
 plt.plot(obs_array_descaled[:,6], label='soc_battery')
 plt.plot(obs_array_descaled[:,7], label='power from grid')
-plt.plot(obs_array_descaled[:,8], label='power from battery')
+plt.plot(power_from_battery_array_descaled, label='power from battery')
 plt.legend()
 plt.show()
 
-energy_balance = obs_array_descaled[:,3] - obs_array_descaled[:,5] - obs_array_descaled[:,8] - obs_array_descaled[:,7]
 
 fig,axs = plt.subplots(3,3)
 axs = axs.flatten()
@@ -110,10 +111,10 @@ axs[3].plot(obs_array_descaled[0:k,6], label='soc_battery')
 axs[3].set_title('soc_battery')
 axs[4].plot(obs_array_descaled[0:k,7], label='power from grid')
 axs[4].set_title('power from grid')
-axs[5].plot(obs_array_descaled[0:k,8], label='power from battery')
+axs[5].plot(power_from_battery_array_descaled, label='power from battery')
 axs[5].set_title('power from battery')
-axs[7].plot(energy_balance[0:k], label='energy balance')
-axs[7].set_title('energy balance')
+#axs[7].plot(energy_balance[0:k], label='energy balance')
+#axs[7].set_title('energy balance')
 axs[8].plot(energy_cost_array[0:k], label='energy cost')
 axs[8].set_title('energy cost')
 plt.legend()

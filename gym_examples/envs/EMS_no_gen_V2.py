@@ -110,17 +110,16 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             "power_from_battery": self._power_from_battery,
         }
 
-    def update_determined_obs(self):
+    def update_determined_obs(self, extensive_print=True):
         day_year = round(self.descale_value(self._day_year, self.range_dict['day_year'][0],
                                             self.range_dict['day_year'][1]))
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
         total_quarter = round((day_year - 1) * 96 + quarter_day)
-        print('total quarter:'+str(total_quarter))
-        # print('day year is ' + str(day_year))
-        # print('quarter day is ' + str(quarter_day))
-        # print('total quarter is ' + str(total_quarter))
-        print(total_quarter)
+        if extensive_print:
+            print('day year is ' + str(day_year))
+            print('quarter day is ' + str(quarter_day))
+            print('total quarter is ' + str(total_quarter))
         usage = self.df_env.usage[total_quarter].astype(np.float64)
         day_ahead_price = self.df_env.day_ahead_price[total_quarter].astype(np.float64)
         solar_generation = self.df_env.solar_generation[total_quarter].astype(np.float64)
@@ -147,8 +146,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         quarter_day = self.np_random.integers(low=0, high=95, dtype=int)
         if self.FIX_TIME:
             day_year = 99
-            quarter_day = 1
-        day_week = day_year % 6
+            quarter_day = 0
+        day_week = day_year % 7
         self._start_quarter = quarter_day
         self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                           self.range_dict['day_year'][1])
@@ -213,6 +212,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
     def step_proceed_quarter(self):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
+        print('quarter_day:' + str(quarter_day))
         quarter_day = quarter_day + 1
         if quarter_day < 96:
             self._quarter_day = self.scale_value(quarter_day, self.range_dict['quarter_day'][0],
@@ -241,6 +241,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                 day_year = 0
                 self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                                   self.range_dict['day_year'][1])
+        print('day week is :' +str(self._day_week))
         return
 
     def step_power_from_grid(self):

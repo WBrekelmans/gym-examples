@@ -14,6 +14,9 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         self.NUMBER_OF_DAYS = 7
         self.FIX_SOC = True
         self.FIX_TIME = True
+        self.terminated = False
+        self.start_day_year = 99
+        self.start_quarter_day = 0
         self.battery_capacity = 4e5  # wh
         self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
 
@@ -110,7 +113,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             "power_from_battery": self._power_from_battery,
         }
 
-    def update_determined_obs(self, extensive_print=True):
+    def update_determined_obs(self, extensive_print=False):
         day_year = round(self.descale_value(self._day_year, self.range_dict['day_year'][0],
                                             self.range_dict['day_year'][1]))
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
@@ -145,8 +148,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         day_year = self.np_random.integers(low=0, high=364, dtype=int)
         quarter_day = self.np_random.integers(low=0, high=95, dtype=int)
         if self.FIX_TIME:
-            day_year = 99
-            quarter_day = 0
+            day_year = self.start_day_year
+            quarter_day = self.start_quarter_day
         day_week = day_year % 7
         self._start_quarter = quarter_day
         self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
@@ -209,10 +212,9 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         info = self._get_info()
         return obs, info
 
-    def step_proceed_quarter(self):
+    def step_proceed_quarter(self, extensive_print = False):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
-        print('quarter_day:' + str(quarter_day))
         quarter_day = quarter_day + 1
         if quarter_day < 96:
             self._quarter_day = self.scale_value(quarter_day, self.range_dict['quarter_day'][0],
@@ -241,7 +243,15 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                 day_year = 0
                 self._day_year = self.scale_value(day_year, self.range_dict['day_year'][0],
                                                   self.range_dict['day_year'][1])
-        print('day week is :' +str(self._day_week))
+
+        if extensive_print:
+            day_week = round(self.descale_value(self._day_week, self.range_dict['day_week'][0],
+                                                self.range_dict['day_week'][1]))
+            day_year = round(self.descale_value(self._day_year, self.range_dict['day_year'][0],
+                                                self.range_dict['day_year'][1]))
+            print('quarter day:' + str(quarter_day))
+            print('day week is :' + str(day_week))
+            print('day year:' + str(day_year))
         return
 
     def step_power_from_grid(self):
@@ -299,6 +309,26 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         # reward = self.punish_soc()
         reward = self.get_energy_cost() * -1
         return reward
+
+    def get_prev_scaled_obs(self):
+        return {
+                "day_year": round(self.descale_value(self._day_year, self.range_dict['day_year'][0],
+                                                self.range_dict['day_year'][1])),
+                "day_week": round(self.descale_value(self._day_week, self.range_dict['day_week'][0],
+                                                self.range_dict['day_week'][1])),
+                "quarter_day": round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
+                                                self.range_dict['quarter_day'][1])),
+                "usage": self.descale_value(self._usage, self.range_dict['usage'][0],
+                                                self.range_dict['usage'][1]),
+                "day_ahead_price": self.descale_value(self._day_ahead_price, self.range_dict['day_ahead_price'][0],
+                                                self.range_dict['day_ahead_price'][1]),
+                "solar_generation": self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
+                                                self.range_dict['solar_generation'][1]),
+                "soc_battery": self.descale_value(self._soc_battery, self.range_dict['soc_battery'][0],
+                                                self.range_dict['soc_battery'][1]),
+                "power_from_grid": self.descale_value(self._power_from_grid, self.range_dict['power_from_grid'][0],
+                                                self.range_dict['power_from_grid'][1])
+            }
 
     def step(self, action):
         self._power_from_battery = action[0]

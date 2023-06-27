@@ -10,9 +10,10 @@ import scipy.integrate as integrate
 class EnergyManagementEnv_no_gen_V2(gym.Env):
     def __init__(self):
         self._power_from_grid = None
-        self._power_from_battery = None
+        self.power_from_battery = None
         self.NUMBER_OF_DAYS = 7
         self.FIX_SOC = True
+        self.initial_soc = 0
         self.FIX_TIME = True
         self.terminated = False
         self.start_day_year = 99
@@ -85,6 +86,10 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
     def descale_value(self, value, min_des, max_des):
         return self.scale_eq(value, -1, 1, min_des, max_des)
 
+    def test_set_initial_soc(self, initial_soc):
+        self.initial_soc = initial_soc
+        return
+
     def _get_obs(self):
         return {
             "day_year": np.array([self._day_year]),
@@ -110,7 +115,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return {
             "battery_percentage": (self._soc_battery / self.battery_capacity) * 100,  # battery charge percentage
             "energy_cost": self.get_energy_cost(),
-            "power_from_battery": self._power_from_battery,
+            "power_from_battery": self.power_from_battery,
         }
 
     def update_determined_obs(self, extensive_print=False):
@@ -166,7 +171,8 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
                                                              high=1))
             setattr(self, '_' + prob_obs, value_to_set)
         if self.FIX_SOC:
-            self._soc_battery = 0
+            self._soc_battery = self.initial_soc
+            self._soc_battery = np.clip(self._soc_battery, -1, 1)
         return
 
     # give power from grid a random value after reset
@@ -174,7 +180,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
                                               self.range_dict['solar_generation'][1])
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_dict['power_from_battery'][0],
+        power_from_battery = self.descale_value(self.power_from_battery, self.range_dict['power_from_battery'][0],
                                                 self.range_dict['power_from_battery'][1])
         power_from_grid = usage - solar_generation - power_from_battery
         self._power_from_grid = self.scale_value(power_from_grid, self.range_dict['power_from_grid'][0],
@@ -185,7 +191,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
                                               self.range_dict['solar_generation'][1])
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+        power_from_battery = self.descale_value(self.power_from_battery, self.range_power_from_battery[0],
                                                 self.range_power_from_battery[1])
         power_from_grid = self.descale_value(self._power_from_grid, self.range_dict['power_from_grid'][0],
                                              self.range_dict['power_from_grid'][1])
@@ -201,7 +207,6 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
 
     def reset(self, seed=None, options=None):
         self._quarter_counter = 0
-        self.terminated = False
         super().reset(seed=seed)
         self.reset_probabilistic_time_obs()
         self.update_determined_obs()
@@ -258,7 +263,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         usage = self.descale_value(self._usage, self.range_dict['usage'][0], self.range_dict['usage'][1])
         solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
                                               self.range_dict['solar_generation'][1])
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+        power_from_battery = self.descale_value(self.power_from_battery, self.range_power_from_battery[0],
                                                 self.range_power_from_battery[1])
         # check if power from battery is really from current action
         power_from_grid = usage - solar_generation - power_from_battery
@@ -267,8 +272,21 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return
 
     def step_soc_battery_new(self):
-        power_from_battery = self.descale_value(self._power_from_battery, self.range_power_from_battery[0],
+        # first clip power from battery to allowed range
+        self.power_from_battery = np.clip(self.power_from_battery, -1, 1)
+
+        power_from_battery = self.descale_value(self.power_from_battery, self.range_power_from_battery[0],
                                                 self.range_power_from_battery[1])
+
+        print(power_from_battery)
+
+        power_from_battery = np.clip(power_from_battery, self.range_power_from_battery[0], self.range_power_from_battery[1])
+
+        print(power_from_battery)
+        self.power_from_battery = self.scale_value(power_from_battery, self.range_power_from_battery[0],
+                                                self.range_power_from_battery[1])
+
+
         old_soc_battery = self.descale_value(self._soc_battery, self.range_dict['soc_battery'][0],
                                              self.range_dict['soc_battery'][1])
         new_soc = old_soc_battery - power_from_battery * 0.25
@@ -280,20 +298,20 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             if power_from_battery < 0:
                 # determine allowed power we can push to battery
                 delta_soc = self.range_dict['soc_battery'][1] - old_soc_battery
-                power_from_battery = -1 * delta_soc * 1 / 4
+                power_from_battery = -1 * delta_soc * 4
         # battery is empty
         if new_soc < self.range_dict['soc_battery'][0]:
             if power_from_battery > 0:
                 # determine allowed power we can take from battery
                 delta_soc = self.range_dict['soc_battery'][0] - old_soc_battery
                 # taking power from battery
-                power_from_battery = -1 * delta_soc * 1 / 4
+                power_from_battery = -1 * delta_soc * 4
         new_soc = np.clip(new_soc, self.range_dict["soc_battery"][0],
                           self.range_dict["soc_battery"][1])
         new_soc = self.scale_value(new_soc, self.range_dict['soc_battery'][0],
                                    self.range_dict['soc_battery'][1])
         self._soc_battery = new_soc
-        self._power_from_battery = self.scale_value(power_from_battery, self.range_power_from_battery[0],
+        self.power_from_battery = self.scale_value(power_from_battery, self.range_power_from_battery[0],
                                                     self.range_power_from_battery[1])
         return
 
@@ -331,7 +349,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
             }
 
     def step(self, action):
-        self._power_from_battery = action[0]
+        self.power_from_battery = action[0]
         # mask power from battery to allow next SOC to be legal
         # this also gets us the new SOC
         self.step_soc_battery_new()
@@ -355,3 +373,5 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
 
     def render(self, mode='human'):
         pass
+
+

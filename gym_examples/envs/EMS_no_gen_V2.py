@@ -370,6 +370,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         obs = self._get_obs()
         if self._quarter_counter == 95 * self.NUMBER_OF_DAYS:
             self.terminated = True
+            self.truncated = True
         else:
             self.terminated = False
         return obs, reward, self.terminated, self.truncated, info

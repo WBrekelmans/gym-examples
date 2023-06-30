@@ -14,7 +14,7 @@ import gymnasium as gym
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/clip_and_scale_reward/checkpoint_000002/policies/default_policy"
+chkpt_dst = "/home/willem/policies/clip_and_scale_reward_proper_reset_batch_mode/checkpoint_000001/policies/default_policy"
 
 # register and make the environment
 select_env = "gym_examples/EMS_no_gen-v2"
@@ -47,7 +47,7 @@ obs_array = np.empty((0,width_array))
 i=1
 while (env.terminated==False):
     # determine action
-    action = my_policy.compute_single_action([obs], explore=False)[0]
+    action = my_policy.compute_single_action([obs], explore=False, normalize)[0]
     # step the environment
     output = env.step(action)
     # read out observatrions
@@ -83,14 +83,16 @@ obs_array_descaled['power_from_grid'] = env.descale_value(obs_array[:,7], env.ra
 obs_array_descaled['power_from_battery'] = env.descale_value(power_from_battery_array, env.range_power_from_battery[0], env.range_power_from_battery[1])
 
 # plot descaled
-plt.figure()
-plt.plot(obs_array_descaled['usage'], label='usage')
-plt.plot(obs_array_descaled['day_ahead_price'], label='day ahead price')
-plt.plot(obs_array_descaled['solar_generation'], label='solar_generation')
-plt.plot(obs_array_descaled['soc_battery'], label='soc_battery')
-plt.plot(obs_array_descaled['power_from_grid'], label='power from grid')
-plt.plot(obs_array_descaled['power_from_battery'], label='power from battery')
-plt.legend()
+fig,axs=plt.subplots(2,1,sharex=True)
+axs=axs.flatten()
+axs[0].plot(obs_array_descaled['usage'], label='usage')
+axs[0].plot(obs_array_descaled['day_ahead_price'], label='day ahead price')
+axs[0].plot(obs_array_descaled['solar_generation'], label='solar_generation')
+axs[0].plot(obs_array_descaled['soc_battery'], label='soc_battery')
+axs[0].plot(obs_array_descaled['power_from_grid'], label='power from grid')
+axs[0].plot(obs_array_descaled['power_from_battery'], label='power from battery')
+axs[0].legend()
+axs[1].plot(obs_array_descaled['day_ahead_price'], label='day ahead price')
 plt.show()
 
 # subplots descaled

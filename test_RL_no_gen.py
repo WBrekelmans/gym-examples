@@ -1,6 +1,6 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/clip_and_scale_reward_proper_reset"
+chkpt_root = "/home/willem/policies/clip_and_scale_reward_proper_reset_batch_mode"
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
 ray_results = "{}/ray_results/".format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
@@ -21,8 +21,8 @@ register_env("selected_env", lambda config: env)
 from ray.rllib.algorithms.ppo import PPOConfig
 config = (
     PPOConfig()
-    .environment(env="selected_env", clip_actions = True)
-    .rollouts(num_rollout_workers=3)
+    .environment(env="selected_env", normalize_actions = True)
+    .rollouts(num_rollout_workers=10, batch_mode='complete_episodes')
     .framework("tf2")
     .evaluation(evaluation_num_workers=1, evaluation_interval=100, evaluation_duration=5, evaluation_duration_unit='episodes')
     .training(model={"fcnet_hiddens": [32, 32]}, train_batch_size=10000,  sgd_minibatch_size=100, gamma=0.9, lr=0.001, kl_coeff=0.3)

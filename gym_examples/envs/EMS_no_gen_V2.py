@@ -124,6 +124,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         quarter_day = round(self.descale_value(self._quarter_day, self.range_dict['quarter_day'][0],
                                                self.range_dict['quarter_day'][1]))
         total_quarter = round((day_year - 1) * 96 + quarter_day)
+        print(total_quarter)
         if extensive_print:
             print('day year is ' + str(day_year))
             print('quarter day is ' + str(quarter_day))
@@ -206,6 +207,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         return
 
     def reset(self, seed=None, options=None):
+        self.terminated = False
         self._quarter_counter = 0
         super().reset(seed=seed)
         self.reset_probabilistic_time_obs()
@@ -326,6 +328,7 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
     def step_reward(self):
         # reward = self.punish_soc()
         reward = self.get_energy_cost() * -1
+        reward = reward/100
         return reward
 
     def get_prev_scaled_obs(self):

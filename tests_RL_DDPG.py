@@ -1,6 +1,6 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/special_reward"
+chkpt_root = "/home/willem/policies/TD3"
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
 ray_results = "{}/ray_results/".format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
@@ -18,16 +18,17 @@ env = gym.make("gym_examples/EMS_no_gen-v2")
 register_env("selected_env", lambda config: env)
 
 # training configuration
-from ray.rllib.algorithms.ppo import PPOConfig
+from ray.rllib.algorithms.ddpg.ddpg import DDPGConfig
+from ray.rllib.algorithms.sac.sac import SACConfig
+from ray.rllib.algorithms.td3 import TD3Config
+
 config = (
-    PPOConfig()
+    TD3Config()
     .environment(env="selected_env", clip_actions = True)
-    .rollouts(num_rollout_workers=14, batch_mode='complete_episodes')
-    .framework("tf2")
-    .training(model={"fcnet_hiddens": [32, 32]}, train_batch_size=10000,  sgd_minibatch_size=128, gamma=0.995, lr=0.0001, kl_coeff=0.3)
+    .rollouts(num_rollout_workers=8)
     .debugging(log_level='INFO')
 )
-#     .evaluation(evaluation_num_workers=1, evaluation_interval=100, evaluation_duration=1, evaluation_duration_unit='episodes')
+
 agent = config.build()
 
 # train loop

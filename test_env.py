@@ -21,7 +21,7 @@ action = [1,-1]
 
 i = 0
 width_array = 10
-length_array = 96*7
+length_array = 95
 
 obs_array = np.zeros(shape=(length_array, width_array))
 action_array = np.zeros(shape=(length_array, 2))

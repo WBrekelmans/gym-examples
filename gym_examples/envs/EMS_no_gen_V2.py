@@ -11,16 +11,16 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
     def __init__(self):
         self._power_from_grid = None
         self.power_from_battery = None
-        self.NUMBER_OF_DAYS = 7
+        self.NUMBER_OF_DAYS = 1 # was 7
         self.FIX_SOC = True
         self.initial_soc = 0
         self.FIX_TIME = True
         self.terminated = False
-        self.start_day_year = 99
+        self.start_day_year = 101 # was 99
         self.start_quarter_day = 0
         self.battery_capacity = 4e5  # wh
-        self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h
-
+        self.charge_rate_battery = self.battery_capacity  # full in one hour, in kw/h\
+        self.special_reward = True
         self.range_dict_disc = {"day_year": [0, 364], "day_week": [0, 6], "quarter_day": [0, 95]}
         self.range_dict_disc_r = {"day_year": [-1, 1], "day_week": [-1, 1], "quarter_day": [-1, 1]}
         self.range_dict_cont = {"usage": [75000.0 * 4, 249000.0 * 4],
@@ -208,13 +208,13 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
 
     def reset(self, seed=None, options=None):
         self.terminated = False
+        self.truncated = False
         self._quarter_counter = 0
         super().reset(seed=seed)
         self.reset_probabilistic_time_obs()
         self.update_determined_obs()
         self.reset_probabilistic_obs()
-        self._power_from_grid = np.float64(self.np_random.uniform(low=-1,
-                                                                  high=1))
+        self._power_from_grid = 0
         obs = self._get_obs()
         info = self._get_info()
         return obs, info
@@ -329,6 +329,19 @@ class EnergyManagementEnv_no_gen_V2(gym.Env):
         # reward = self.punish_soc()
         reward = self.get_energy_cost() * -1
         reward = reward/100
+        if self.special_reward:
+            reward = 0
+            #if self.power_from_battery > 0:
+            usage = self.descale_value(self._usage, self.range_dict['usage'][0],
+                                                self.range_dict['usage'][1])
+            solar_generation = self.descale_value(self._solar_generation, self.range_dict['solar_generation'][0],
+                                                self.range_dict['solar_generation'][1])
+            day_ahead_price = self.descale_value(self._day_ahead_price, self.range_dict['day_ahead_price'][0],
+                                                self.range_dict['day_ahead_price'][1])
+            power_from_battery = self.descale_value(self.power_from_battery, self.range_power_from_battery[0],
+                                                self.range_power_from_battery[1])
+            reward = ((usage-solar_generation)*day_ahead_price) - ((usage-solar_generation-power_from_battery)*day_ahead_price)
+            reward = reward/100
         return reward
 
     def get_prev_scaled_obs(self):

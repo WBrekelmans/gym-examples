@@ -14,7 +14,7 @@ import gymnasium as gym
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/clip_and_scale_reward_proper_reset_batch_mode/checkpoint_000001/policies/default_policy"
+chkpt_dst = "/home/willem/policies/special_reward/checkpoint_000033/policies/default_policy"
 
 # register and make the environment
 select_env = "gym_examples/EMS_no_gen-v2"
@@ -36,18 +36,16 @@ energy_cost_array = []
 power_from_battery_array = []
 battery_percentage_vec = []
 
-# make algorithm
-algo = PPOConfig().environment(select_env).build()
-
 # reset the environment
 obs, info = env.reset()
 obs = np.fromiter(obs.values(), dtype='float')
 obs_array = np.empty((0,width_array))
+obs_array = np.vstack((obs_array, obs))
 
 i=1
 while (env.terminated==False):
     # determine action
-    action = my_policy.compute_single_action([obs], explore=False, normalize)[0]
+    action = my_policy.compute_single_action([obs], explore=False)[0]
     # step the environment
     output = env.step(action)
     # read out observatrions
@@ -55,7 +53,7 @@ while (env.terminated==False):
     obs = np.fromiter(obs.values(), dtype='float')
     obs_array = np.vstack((obs_array,obs))
     action_array = np.append(action_array, action)
-    energy_cost_array = np.append(energy_cost_array, output[4]['energy_cost'])
+    energy_cost_array = np.append(energy_cost_array, output[1])
     power_from_battery_array = np.append(power_from_battery_array, output[4]['power_from_battery'])
     print(i)
     i += 1
@@ -145,7 +143,7 @@ print('fraction cost compared to solar baseline sell-back: ' + str(cost_ratio_so
 f,ax = plt.subplots()
 ax.plot(grid_cost, label='agent cost')
 ax.plot(baseline, label='baseline')
-ax.plot(solar_baseline, label='solar')
+ax.plot(len(solar_baseline), label='solar')
 ax.plot(solar_baseline_sellback, label='solar sellback')
 ax.legend()
 

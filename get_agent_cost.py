@@ -59,7 +59,7 @@ def get_agent_cost_iteration(foldername, iteration, env):
 agent_cost_arr = []
 energy_cost_arr = []
 foldername='special_reward'
-k=5
+k=35
 action_mat = np.empty((0,95))
 pfb_mat = np.empty((0,95))
 for i in range(k):

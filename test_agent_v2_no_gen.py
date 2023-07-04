@@ -14,7 +14,7 @@ import gymnasium as gym
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/special_reward/checkpoint_000033/policies/default_policy"
+chkpt_dst = "/home/willem/policies/special_reward/checkpoint_000038/policies/default_policy"
 
 # register and make the environment
 select_env = "gym_examples/EMS_no_gen-v2"

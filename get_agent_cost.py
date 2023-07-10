@@ -4,23 +4,20 @@ import matplotlib.pyplot as plt
 from ray.tune.registry import register_env
 from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
 from ray.rllib.algorithms.algorithm import Policy
-import tensorflow as tf
+from ray.rllib.algorithms.algorithm import Algorithm
+
 from ray.rllib.algorithms.ppo import PPOConfig
 import gymnasium as gym
 
-# register and make the environment
-select_env = "gym_examples/EMS_no_gen-v2"
-register_env(select_env, lambda config: EnergyManagementEnv_no_gen_V2())
-env = gym.make(select_env)
-# make algorithm
-algo = PPOConfig().environment(select_env).build()
+# load the environment
+from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
+env = EnergyManagementEnv_no_gen_V2(env_config={'env_config': {}})
+from ray.rllib.algorithms.algorithm import Algorithm
 
 def get_agent_cost_iteration(foldername, iteration, env):
-    chkpt_dst = "/home/willem/policies/" + foldername + "/checkpoint_" + str(iteration).zfill(6) + "/policies/default_policy"
-    # load chkpt
-    tf.compat.v1.enable_eager_execution()
+    chkpt_dst = "/home/willem/policies/" + foldername + "/checkpoint_" + str(iteration).zfill(6)
     # https://github.com/tensorflow/tensorflow/issues/18304
-    my_policy = Policy.from_checkpoint(chkpt_dst)
+    my_policy = Algorithm.from_checkpoint(chkpt_dst)
     # make arrays
     width_array = 8
     obs_array = []
@@ -31,15 +28,17 @@ def get_agent_cost_iteration(foldername, iteration, env):
     battery_percentage_vec = []
     # reset the environment
     obs, info = env.reset()
+    obs_dict=obs
     obs = np.fromiter(obs.values(), dtype='float')
     obs_array = np.empty((0, width_array))
     while (env.terminated == False):
         # determine action
-        action = my_policy.compute_single_action([obs], explore=False)[0]
+        action = my_policy.compute_single_action(obs_dict, explore=False)[0]
         # step the environment
-        output = env.step(action)
+        output = env.step([action])
         # read out observatrions
         obs = output[0]
+        obs_dict = obs
         obs = np.fromiter(obs.values(), dtype='float')
         obs_array = np.vstack((obs_array, obs))
         action_array = np.append(action_array, action)
@@ -58,8 +57,8 @@ def get_agent_cost_iteration(foldername, iteration, env):
 
 agent_cost_arr = []
 energy_cost_arr = []
-foldername='special_reward'
-k=35
+foldername='special_reward_chkpt_test'
+k=31
 action_mat = np.empty((0,95))
 pfb_mat = np.empty((0,95))
 for i in range(k):

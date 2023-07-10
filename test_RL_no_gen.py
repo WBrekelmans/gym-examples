@@ -1,8 +1,10 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/special_reward"
+run_name = "special_reward_chkpt_test"
+chkpt_root = "/home/willem/policies/" + run_name
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
-ray_results = "{}/ray_results/".format(os.getenv("HOME"))
+ray_results_str = "{}/ray_results/" + run_name + "/"
+ray_results = ray_results_str.format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
 
 # local mode
@@ -13,18 +15,18 @@ print('http://' + context.dashboard_url)
 # import environment
 from ray.tune.registry import register_env
 import gymnasium as gym
-from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
 env = gym.make("gym_examples/EMS_no_gen-v2")
 register_env("selected_env", lambda config: env)
+
 
 # training configuration
 from ray.rllib.algorithms.ppo import PPOConfig
 config = (
     PPOConfig()
     .environment(env="selected_env", clip_actions = True)
-    .rollouts(num_rollout_workers=14, batch_mode='complete_episodes')
+    .rollouts(num_rollout_workers=14)
     .framework("tf2")
-    .training(model={"fcnet_hiddens": [32, 32]}, train_batch_size=10000,  sgd_minibatch_size=128, gamma=0.995, lr=0.0001, kl_coeff=0.3)
+    .training(model={"fcnet_hiddens": [32, 32]}, gamma=0.995, lr=0.0001, lambda_=0.96)
     .debugging(log_level='INFO')
 )
 #     .evaluation(evaluation_num_workers=1, evaluation_interval=100, evaluation_duration=1, evaluation_duration_unit='episodes')

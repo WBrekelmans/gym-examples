@@ -6,7 +6,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 from ray.tune.registry import register_env
 from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
+env = EnergyManagementEnv_no_gen_V2(env_config={'env_config': {}})
 from ray.rllib.algorithms.algorithm import Policy
+from ray.rllib.algorithms.algorithm import Algorithm
+
 import tensorflow as tf
 from ray.rllib.algorithms.ppo import PPOConfig
 import gymnasium as gym
@@ -14,17 +17,8 @@ import gymnasium as gym
 matplotlib.use('TkAgg')
 
 # inputs
-chkpt_dst = "/home/willem/policies/special_reward/checkpoint_000038/policies/default_policy"
-
-# register and make the environment
-select_env = "gym_examples/EMS_no_gen-v2"
-register_env(select_env, lambda config: EnergyManagementEnv_no_gen_V2())
-env = gym.make(select_env)
-
-# load chkpt
-tf.compat.v1.enable_eager_execution()
-# https://github.com/tensorflow/tensorflow/issues/18304
-my_policy = Policy.from_checkpoint(chkpt_dst)
+chkpt_dst = "/home/willem/ray_results/PPO/PPO_EnergyManagementEnv_no_gen_V2_a4937_00005_5_gamma=0.9900,lr=0.0010_2023-07-08_00-07-20/checkpoint_000100"
+my_policy = Algorithm.from_checkpoint(chkpt_dst)
 
 # array
 i = 0
@@ -38,6 +32,7 @@ battery_percentage_vec = []
 
 # reset the environment
 obs, info = env.reset()
+obs_dict = obs
 obs = np.fromiter(obs.values(), dtype='float')
 obs_array = np.empty((0,width_array))
 obs_array = np.vstack((obs_array, obs))
@@ -45,11 +40,12 @@ obs_array = np.vstack((obs_array, obs))
 i=1
 while (env.terminated==False):
     # determine action
-    action = my_policy.compute_single_action([obs], explore=False)[0]
+    action = my_policy.compute_single_action(obs_dict, explore=False)[0]
     # step the environment
-    output = env.step(action)
+    output = env.step([action])
     # read out observatrions
     obs = output[0]
+    obs_dict = obs
     obs = np.fromiter(obs.values(), dtype='float')
     obs_array = np.vstack((obs_array,obs))
     action_array = np.append(action_array, action)

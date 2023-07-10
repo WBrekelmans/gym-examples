@@ -8,7 +8,7 @@ import scipy.integrate as integrate
 
 
 class EnergyManagementEnv_no_gen_V2(gym.Env):
-    def __init__(self):
+    def __init__(self, env_config):
         self._power_from_grid = None
         self.power_from_battery = None
         self.NUMBER_OF_DAYS = 1 # was 7

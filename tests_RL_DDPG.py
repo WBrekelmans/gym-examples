@@ -1,6 +1,6 @@
 import os
 import shutil
-chkpt_root = "/home/willem/policies/TD3"
+chkpt_root = "/home/willem/policies/DDPG_special_reward"
 shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
 ray_results = "{}/ray_results/".format(os.getenv("HOME"))
 shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
@@ -23,9 +23,9 @@ from ray.rllib.algorithms.sac.sac import SACConfig
 from ray.rllib.algorithms.td3 import TD3Config
 
 config = (
-    TD3Config()
+    DDPGConfig()
     .environment(env="selected_env", clip_actions = True)
-    .rollouts(num_rollout_workers=8)
+    .rollouts(num_rollout_workers=14)
     .debugging(log_level='INFO')
 )
 

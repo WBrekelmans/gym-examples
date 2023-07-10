@@ -1,41 +1,26 @@
-# libraries
-import os
-import shutil
 import ray
 from ray import air, tune
-from ray.tune.registry import register_env
-from gym_examples.envs.EMS_no_gen import EnergyManagementEnv_no_gen
 
-# to store results
-chkpt_root = "/home/willem/policies/test"
-shutil.rmtree(chkpt_root, ignore_errors=True, onerror=None)
-ray_results = "{}/ray_results/".format(os.getenv("HOME"))
-shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
+ray.init()
 
-# environment
-select_env = "gym_examples/EMS_no_gen-v0"
-register_env(select_env, lambda config: EnergyManagementEnv_no_gen())
-
-# initialize ray
-ray.init(include_dashboard=False)
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.tune.logger import pretty_print
+from gym_examples.envs.EMS_no_gen_V2 import EnergyManagementEnv_no_gen_V2
 
-algo = (
+config = (
     PPOConfig()
-    .rollouts(num_rollout_workers=1)
-    .environment(select_env)
-    .build()
+    .environment(env=EnergyManagementEnv_no_gen_V2, clip_actions=True, env_config={'env_config': {}})
+    .rollouts(num_rollout_workers=13)
+    .training(model={"fcnet_hiddens": tune.grid_search([[32, 32], [64, 64], [128, 128]])}, gamma=tune.grid_search([0.9, 0.925, 0.95]),
+              lr=tune.grid_search([0.01, 0.00055, 0.0001]))
+    .debugging(log_level='INFO')
 )
-
-# grid search
-config = PPOConfig().training(lr=tune.grid_search([0.01, 0.001, 0.0001]))
 
 tuner = tune.Tuner(
     "PPO",
-    run_config=air.RunConfig(),
+    run_config=air.RunConfig(
+        stop={"training_iteration": 500},
+    ),
     param_space=config,
 )
 
 tuner.fit()
-ray.shutdown()

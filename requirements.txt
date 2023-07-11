@@ -9,3 +9,7 @@ tensorflow-probability==0.19.0
 tensorrt==8.6.1
 matplotlib==3.7.0
 ray[all]==2.5.0
+
+scipy~=1.11.0
+gym~=0.21.0
+Pyomo~=6.6.1
